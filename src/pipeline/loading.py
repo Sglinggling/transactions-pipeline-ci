@@ -1,13 +1,16 @@
-"""Chargement et validation des transactions CSV.
+"""Chargement et validation des transactions (CSV, texte OCR).
 
-Valide des transactions déjà en mémoire (contenu CSV en bytes) : règles
-communes (validate_transactions) et schéma de sortie fixe. Aucune I/O ici.
+Valide des transactions déjà en mémoire, quelle que soit leur provenance :
+contenu CSV (bytes) ou texte OCR d'une image. Toutes passent par les mêmes
+règles (validate_transactions) et produisent le même schéma. Aucune I/O ici.
 """
 
 import io
 
 import numpy as np
 import pandas as pd
+
+from pipeline.extraction import ExtractionError, extract_transaction
 
 EXPECTED_COLUMNS = [
     "datetime_transaction",
@@ -101,3 +104,16 @@ def load_transactions(content: bytes, name: str) -> pd.DataFrame:
     except pd.errors.EmptyDataError as exc:
         raise TransactionValidationError(name, None, "fichier vide") from exc
     return validate_transactions(raw, name)
+
+
+def load_ocr_transaction(text: str, name: str) -> pd.DataFrame:
+    """Texte OCR d'un avis de virement -> DataFrame typé d'une ligne, même schéma
+    que load_transactions. Lève TransactionValidationError (champ manquant ou
+    illisible, valeur invalide)."""
+    try:
+        record = extract_transaction(text)
+    except ExtractionError as exc:
+        raise TransactionValidationError(name, None, str(exc)) from exc
+    return validate_transactions(
+        pd.DataFrame([record], columns=EXPECTED_COLUMNS, dtype=str), name, line_offset=None
+    )

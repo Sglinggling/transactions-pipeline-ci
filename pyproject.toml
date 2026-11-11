@@ -12,6 +12,7 @@ dependencies = [
     "pandas>=2.2",
     "psycopg[binary]>=3.2",
     "boto3>=1.35",
+    "pillow>=10.4",
 ]
 
 [project.optional-dependencies]
@@ -22,6 +23,9 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+pipeline = ["fonts/*.ttf", "fonts/*.txt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

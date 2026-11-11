@@ -50,7 +50,9 @@ jobs:
         run: make s3-init
       - name: Générer les CSV (zone de dépôt locale)
         run: make generate
-      - name: Upload des CSV vers S3
+      - name: Générer les images d'avis de virement (OCR)
+        run: make generate-images
+      - name: Upload des CSV et des images vers S3
         run: make s3-upload
       - name: Vérifier la présence des objets dans S3
         run: make s3-verify
