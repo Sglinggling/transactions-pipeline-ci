@@ -4,7 +4,7 @@ Démonstration documentée : une régression introduite lors d'un « refactor »
 passe le lint et les tests unitaires, mais est bloquée par les tests
 d'intégration de la CI avant d'atteindre `main`.
 
-- Pull request : [#1 refactor: simplifie l'upsert des totaux](https://github.com/Sglinggling/transactions-pipeline-ci-v2/pull/1)
+- Pull request : [#1 refactor: simplifie l'upsert des totaux](https://github.com/Sglinggling/transactions-pipeline-ci/pull/1)
 - Branche : `demo/echec-pipeline`
 
 ## Contexte
@@ -30,7 +30,7 @@ La CI GitHub Actions (`.github/workflows/ci.yml`) tourne sur chaque push sur
 
 ## Cause du problème
 
-Commit [`665def1`](https://github.com/Sglinggling/transactions-pipeline-ci-v2/commit/665def1)
+Commit [`665def1`](https://github.com/Sglinggling/transactions-pipeline-ci/commit/665def1)
 `refactor: simplifie l'upsert des totaux` sur la branche
 `demo/echec-pipeline`. En voulant « simplifier » la requête, le cumul a été
 remplacé par un écrasement :
@@ -60,12 +60,12 @@ une vraie base PostgreSQL.
 
 ## Échec de la pipeline
 
-- Run #15 (pull request) : [43101958969](https://github.com/Sglinggling/transactions-pipeline-ci-v2/actions/runs/43101958969)
+- Run #15 (pull request) : [43101958969](https://github.com/Sglinggling/transactions-pipeline-ci/actions/runs/43101958969)
 
 | Job | Résultat |
 |---|---|
-| `lint-and-unit` | ✅ succès en 27 s, 195 tests unitaires ([job](https://github.com/Sglinggling/transactions-pipeline-ci-v2/actions/runs/43101958969/job/130795453682)) |
-| `integration` | ❌ échec à l'étape **`make test-integration`** en 5 min 38 s ([job](https://github.com/Sglinggling/transactions-pipeline-ci-v2/actions/runs/43101958969/job/130795696875)) |
+| `lint-and-unit` | ✅ succès en 27 s, 195 tests unitaires ([job](https://github.com/Sglinggling/transactions-pipeline-ci/actions/runs/43101958969/job/130795453682)) |
+| `integration` | ❌ échec à l'étape **`make test-integration`** en 5 min 38 s ([job](https://github.com/Sglinggling/transactions-pipeline-ci/actions/runs/43101958969/job/130795696875)) |
 
 Dans le job `integration`, `make run` et `make pipeline` réussissent (la
 pipeline tourne sans erreur, ce qui rend le bug d'autant plus dangereux),
@@ -84,14 +84,14 @@ ligne 95 de `src/pipeline/db.py`, où `{table}.total + EXCLUDED.total` devient
 
 ![Page du run #15 : statut Failure, lint-and-unit vert en 27 s, integration rouge en 5 min 38 s](img/02-run-echec.png)
 
-*Figure 2 — Résumé du run [#15](https://github.com/Sglinggling/transactions-pipeline-ci-v2/actions/runs/43101958969)
+*Figure 2 — Résumé du run [#15](https://github.com/Sglinggling/transactions-pipeline-ci/actions/runs/43101958969)
 (déclenché par l'ouverture de la PR) : statut « Failure », durée 6 min 15 s ;
 `lint-and-unit` vert (27 s), `integration` rouge (5 min 38 s), annotation
 « Process completed with exit code 2 ».*
 
 ## Message d'erreur obtenu
 
-Extraits de `gh run view 43101958969 -R Sglinggling/transactions-pipeline-ci-v2 --log-failed`
+Extraits de `gh run view 43101958969 -R Sglinggling/transactions-pipeline-ci --log-failed`
 (horodatages et colonnes job / étape retirés).
 
 20 tests d'intégration échouent sur 64, tous sur les totaux :
@@ -161,7 +161,7 @@ make: *** [Makefile:50: test-integration] Error 1
 
 ![Terminal : fin de gh run view 43101958969 --log-failed, diff des totaux received_by_iban, puis 20 failed, 44 passed, 195 deselected et exit code 2](img/03-log-erreur.png)
 
-*Figure 3 — Sortie de `gh run view 43101958969 -R Sglinggling/transactions-pipeline-ci-v2 --log-failed | tail -30`
+*Figure 3 — Sortie de `gh run view 43101958969 -R Sglinggling/transactions-pipeline-ci --log-failed | tail -30`
 dans un terminal : fin du diff du dernier test en échec (totaux reçus
 attendus, lignes `-`, contre totaux obtenus, lignes `+` : 14381.33 contre
 12171.84, 2861.67 contre 1409.73, 13162.05 contre 3407.57), puis le résumé
@@ -170,7 +170,7 @@ attendus, lignes `-`, contre totaux obtenus, lignes `+` : 14381.33 contre
 
 ## Correction
 
-Commit [`4e15143`](https://github.com/Sglinggling/transactions-pipeline-ci-v2/commit/4e15143)
+Commit [`4e15143`](https://github.com/Sglinggling/transactions-pipeline-ci/commit/4e15143)
 `fix: rétablit le cumul des totaux entre fichiers`, sur la même branche. Il
 rétablit l'addition de la valeur existante et de la nouvelle (`EXCLUDED`)
 dans la clause `ON CONFLICT` ; aucun test n'a été modifié :
@@ -193,19 +193,19 @@ Vérifié en local avant de pousser : `make test-integration` → 64 passed.
 
 ![Page du commit 4e15143 : checks 2/2, 1 fichier modifié, src/pipeline/db.py ligne 95, EXCLUDED.total redevient {table}.total + EXCLUDED.total](img/04-diff-correction.png)
 
-*Figure 4 — Page du commit [`4e15143`](https://github.com/Sglinggling/transactions-pipeline-ci-v2/commit/4e15143)
+*Figure 4 — Page du commit [`4e15143`](https://github.com/Sglinggling/transactions-pipeline-ci/commit/4e15143)
 sur GitHub (checks 2/2, parent `665def1`) : un seul fichier modifié,
 `src/pipeline/db.py`, ligne 95 rétablie de `total = EXCLUDED.total` vers
 `total = {table}.total + EXCLUDED.total`.*
 
 ## Réussite après correction
 
-- Run #16 (pull request, « synchronize ») : [43104563108](https://github.com/Sglinggling/transactions-pipeline-ci-v2/actions/runs/43104563108)
+- Run #16 (pull request, « synchronize ») : [43104563108](https://github.com/Sglinggling/transactions-pipeline-ci/actions/runs/43104563108)
 
 | Job | Résultat |
 |---|---|
-| `lint-and-unit` | ✅ succès en 30 s ([job](https://github.com/Sglinggling/transactions-pipeline-ci-v2/actions/runs/43104563108/job/130804374166)) |
-| `integration` | ✅ succès en 5 min 32 s ([job](https://github.com/Sglinggling/transactions-pipeline-ci-v2/actions/runs/43104563108/job/130804664967)) |
+| `lint-and-unit` | ✅ succès en 30 s ([job](https://github.com/Sglinggling/transactions-pipeline-ci/actions/runs/43104563108/job/130804374166)) |
+| `integration` | ✅ succès en 5 min 32 s ([job](https://github.com/Sglinggling/transactions-pipeline-ci/actions/runs/43104563108/job/130804664967)) |
 
 Toutes les étapes du job `integration` passent, y compris les démos du retry
 qui avaient été sautées lors de l'échec. Extraits du log :
@@ -222,7 +222,7 @@ INFO    Résumé : 3 traité(s), 0 déjà traité(s), 0 en erreur, 0 non examin�
 
 ![Page du run #16 : statut Success, lint-and-unit vert en 30 s, integration vert en 5 min 32 s](img/05-run-succes.png)
 
-*Figure 5 — Résumé du run [#16](https://github.com/Sglinggling/transactions-pipeline-ci-v2/actions/runs/43104563108)
+*Figure 5 — Résumé du run [#16](https://github.com/Sglinggling/transactions-pipeline-ci/actions/runs/43104563108)
 déclenché par la PR (« synchronize ») après le push du correctif : statut
 « Success », durée 6 min 18 s ; `lint-and-unit` (30 s) et `integration`
 (5 min 32 s) verts. Le titre affiché est celui de la PR.*
@@ -230,7 +230,7 @@ déclenché par la PR (« synchronize ») après le push du correctif : statut
 La pull request est repassée au vert puis a été mergée en merge commit
 (`52f6fd6`, pas de squash) pour garder visibles dans l'historique de `main`
 le commit du bug puis celui de la correction. Le run de `main` après la
-fusion (#17) est vert : [43105929408](https://github.com/Sglinggling/transactions-pipeline-ci-v2/actions/runs/43105929408).
+fusion (#17) est vert : [43105929408](https://github.com/Sglinggling/transactions-pipeline-ci/actions/runs/43105929408).
 
 ![Onglet Commits de la PR #1 fusionnée : 665def1 avec une croix rouge 1/2, 4e15143 avec une coche verte 2/2](img/06-pr-check-vert.png)
 

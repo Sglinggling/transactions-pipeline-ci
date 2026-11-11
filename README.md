@@ -1,6 +1,6 @@
 # transactions-pipeline-ci
 
-[![CI](https://github.com/Sglinggling/transactions-pipeline-ci-v2/actions/workflows/ci.yml/badge.svg)](https://github.com/Sglinggling/transactions-pipeline-ci-v2/actions/workflows/ci.yml)
+[![CI](https://github.com/Sglinggling/transactions-pipeline-ci/actions/workflows/ci.yml/badge.svg)](https://github.com/Sglinggling/transactions-pipeline-ci/actions/workflows/ci.yml)
 
 Pipeline data de transactions financières construite pas à pas dans le cadre
 d'un cours CI/CD. Trois sources convergent vers une base PostgreSQL :
@@ -67,8 +67,8 @@ Prérequis :
 - `make` et `git`.
 
 ```bash
-git clone https://github.com/Sglinggling/transactions-pipeline-ci-v2.git
-cd transactions-pipeline-ci-v2
+git clone https://github.com/Sglinggling/transactions-pipeline-ci.git
+cd transactions-pipeline-ci
 make install        # si python3.12 n'est pas dans le PATH : make install PY=/chemin/vers/python3.12
 make pipeline       # services, modèle, génération, upload S3, vérification, schéma, traitement
 ```
