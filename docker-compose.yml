@@ -36,6 +36,24 @@ services:
       timeout: 5s
       retries: 30
 
+  # SLM local (Ollama, version épinglée). Seuls les modèles sont stockés sur
+  # l'hôte (OLLAMA_MODELS_DIR), pour pouvoir être mis en cache en CI ; la clé
+  # privée d'Ollama (root, 0600, illisible par le cache CI) reste dans le conteneur.
+  ollama:
+    image: ollama/ollama:0.40.15
+    environment:
+      OLLAMA_KEEP_ALIVE: 30m
+      OLLAMA_MODELS: /models
+    ports:
+      - "${SLM_PORT:-11434}:11434"
+    volumes:
+      - ${OLLAMA_MODELS_DIR:-./.ollama/models}:/models
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
 volumes:
   pgdata:
   s3data:

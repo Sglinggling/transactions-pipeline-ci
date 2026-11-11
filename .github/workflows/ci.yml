@@ -54,6 +54,16 @@ jobs:
         run: make s3-up
       - name: Démarrer Postgres
         run: make db-up
+      # Modèle SLM conservé entre deux runs : seul le premier le télécharge.
+      - name: Cache du modèle SLM
+        uses: actions/cache@v4
+        with:
+          path: .ollama/models
+          key: ollama-models-qwen3.5-0.8b-v2
+      - name: Démarrer Ollama (SLM)
+        run: make slm-up
+      - name: Récupérer le modèle SLM
+        run: make slm-pull
       - name: Créer le bucket
         run: make s3-init
       - name: Générer les CSV (zone de dépôt locale)
@@ -71,6 +81,6 @@ jobs:
 
       - run: make test-integration
 
-      - name: Arrêter tous les services (Postgres, S3)
+      - name: Arrêter tous les services (Postgres, S3, Ollama)
         if: always()
         run: make db-down

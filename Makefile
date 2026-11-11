@@ -15,11 +15,15 @@ S3_ACCESS_KEY ?= pipeline
 S3_SECRET_KEY ?= pipelinesecret
 S3_BUCKET ?= transactions
 S3_PREFIX ?= incoming/
+SLM_URL ?= http://localhost:11434
+# Plus petit modèle à 100 % de champs exacts sur les textes de test (README).
+SLM_MODEL ?= qwen3.5:0.8b
 export DATABASE_URL S3_ENDPOINT_URL S3_ACCESS_KEY S3_SECRET_KEY S3_BUCKET S3_PREFIX
+export SLM_URL SLM_MODEL
 
 .DEFAULT_GOAL := help
 .PHONY: help install lint test test-integration generate generate-images generate-texts \
-        db-up db-init db-reset db-down s3-up s3-init s3-upload s3-verify
+        db-up db-init db-reset db-down s3-up s3-init s3-upload s3-verify slm-up slm-pull
 
 help: ## Liste les cibles disponibles
 	@grep -E '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) \
@@ -58,7 +62,7 @@ db-init: ## Applique sql/schema.sql (idempotent)
 db-reset: ## Vide toutes les tables (données de dev perdues)
 	$(PYTHON) -m pipeline.db reset
 
-db-down: ## Arrête tous les services (Postgres, S3) ; volumes conservés
+db-down: ## Arrête tous les services (Postgres, S3, Ollama) ; volumes conservés
 	docker compose down
 
 s3-up: ## Démarre RustFS (S3) et attend qu'il soit healthy
@@ -72,3 +76,12 @@ s3-upload: ## Envoie data/incoming/*.csv, *.png, *.txt sous S3_PREFIX
 
 s3-verify: ## Échoue si un fichier local manque dans le bucket ou a une autre taille
 	$(PYTHON) -m pipeline.storage verify --source-dir $(INCOMING_DIR)
+
+slm-up: ## Démarre Ollama (SLM) et attend qu'il soit healthy
+	docker compose up -d --wait ollama
+
+# Ollama (root) crée certains fichiers en 0600, que le cache CI ne pourrait pas
+# archiver : on les rend lisibles hors du conteneur après le téléchargement.
+slm-pull: ## Télécharge le modèle SLM_MODEL s'il est absent
+	docker compose exec -T ollama ollama pull $(SLM_MODEL)
+	docker compose exec -T ollama chmod -R a+rX /models
