@@ -18,7 +18,8 @@ S3_PREFIX ?= incoming/
 export DATABASE_URL S3_ENDPOINT_URL S3_ACCESS_KEY S3_SECRET_KEY S3_BUCKET S3_PREFIX
 
 .DEFAULT_GOAL := help
-.PHONY: help install lint test test-integration generate generate-images db-up db-init db-reset db-down s3-up s3-init s3-upload s3-verify
+.PHONY: help install lint test test-integration generate generate-images generate-texts \
+        db-up db-init db-reset db-down s3-up s3-init s3-upload s3-verify
 
 help: ## Liste les cibles disponibles
 	@grep -E '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) \
@@ -45,6 +46,9 @@ generate: ## Génère les CSV déterministes dans data/incoming/ (N_FILES=3)
 generate-images: ## Génère les images PNG d'avis de virement (OCR)
 	$(PYTHON) -m pipeline.generate_images --output-dir $(INCOMING_DIR)
 
+generate-texts: ## Génère les textes en langage naturel (SLM)
+	$(PYTHON) -m pipeline.generate_texts --output-dir $(INCOMING_DIR)
+
 db-up: ## Démarre PostgreSQL et attend qu'il soit healthy
 	docker compose up -d --wait postgres
 
@@ -63,7 +67,7 @@ s3-up: ## Démarre RustFS (S3) et attend qu'il soit healthy
 s3-init: ## Crée le bucket (idempotent)
 	$(PYTHON) -m pipeline.storage init
 
-s3-upload: ## Envoie data/incoming/*.csv, *.png sous S3_PREFIX
+s3-upload: ## Envoie data/incoming/*.csv, *.png, *.txt sous S3_PREFIX
 	$(PYTHON) -m pipeline.storage upload --source-dir $(INCOMING_DIR)
 
 s3-verify: ## Échoue si un fichier local manque dans le bucket ou a une autre taille

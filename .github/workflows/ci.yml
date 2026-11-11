@@ -60,7 +60,9 @@ jobs:
         run: make generate
       - name: Générer les images d'avis de virement (OCR)
         run: make generate-images
-      - name: Upload des CSV et des images vers S3
+      - name: Générer les textes en langage naturel (SLM)
+        run: make generate-texts
+      - name: Upload des CSV, des images et des textes vers S3
         run: make s3-upload
       - name: Vérifier la présence des objets dans S3
         run: make s3-verify

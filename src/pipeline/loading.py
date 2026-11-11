@@ -1,8 +1,9 @@
-"""Chargement et validation des transactions (CSV, texte OCR).
+"""Chargement et validation des transactions (CSV, texte OCR, réponse SLM).
 
 Valide des transactions déjà en mémoire, quelle que soit leur provenance :
-contenu CSV (bytes) ou texte OCR d'une image. Toutes passent par les mêmes
-règles (validate_transactions) et produisent le même schéma. Aucune I/O ici.
+contenu CSV (bytes), texte OCR d'une image ou réponse du SLM pour un texte
+libre. Toutes passent par les mêmes règles (validate_transactions) et
+produisent le même schéma. Aucune I/O ici.
 """
 
 import io
@@ -11,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from pipeline.extraction import ExtractionError, extract_transaction
+from pipeline.text_extraction import TextExtractionError, extract_from_response
 
 EXPECTED_COLUMNS = [
     "datetime_transaction",
@@ -113,6 +115,27 @@ def load_ocr_transaction(text: str, name: str) -> pd.DataFrame:
     try:
         record = extract_transaction(text)
     except ExtractionError as exc:
+        raise TransactionValidationError(name, None, str(exc)) from exc
+    return validate_transactions(
+        pd.DataFrame([record], columns=EXPECTED_COLUMNS, dtype=str), name, line_offset=None
+    )
+
+
+def decode_text(content: bytes, name: str) -> str:
+    """Contenu d'un objet .txt -> texte (UTF-8 obligatoire)."""
+    try:
+        return content.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise TransactionValidationError(name, None, "texte non encodé en UTF-8") from exc
+
+
+def load_slm_transaction(raw_response: str, text: str, name: str) -> pd.DataFrame:
+    """Réponse JSON du SLM + texte source -> DataFrame typé d'une ligne, même
+    schéma que load_transactions. Lève TransactionValidationError (réponse non
+    JSON, champ manquant, valeur illisible, garde-fou anti-hallucination)."""
+    try:
+        record = extract_from_response(raw_response, text)
+    except TextExtractionError as exc:
         raise TransactionValidationError(name, None, str(exc)) from exc
     return validate_transactions(
         pd.DataFrame([record], columns=EXPECTED_COLUMNS, dtype=str), name, line_offset=None
