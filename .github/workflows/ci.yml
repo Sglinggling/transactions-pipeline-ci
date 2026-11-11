@@ -50,6 +50,7 @@ jobs:
             tesseract-ocr tesseract-ocr-eng
           tesseract --version
 
+      # Étapes de make pipeline, une par cible pour les voir séparément dans Actions.
       - name: Démarrer S3 (RustFS)
         run: make s3-up
       - name: Démarrer Postgres
@@ -84,6 +85,14 @@ jobs:
         run: make pipeline
 
       - run: make test-integration
+      # Base vidée puis 2 pannes simulées : logs de retry visibles dans Actions.
+      - name: Démo retry (2 pannes puis succès)
+        run: make demo-retry
+      - name: Démo retry S3 (2 pannes de téléchargement puis succès)
+        run: make demo-s3-retry
+      # Conteneur S3 réellement arrêté puis redémarré pendant que la pipeline tourne.
+      - name: Démo panne S3 réelle (arrêt puis redémarrage du conteneur)
+        run: make demo-s3-outage
 
       - name: Arrêter tous les services (Postgres, S3, Ollama)
         if: always()

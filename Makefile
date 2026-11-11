@@ -24,7 +24,11 @@ export SLM_URL SLM_MODEL
 .DEFAULT_GOAL := help
 .PHONY: help install lint test test-integration generate generate-images generate-texts \
         db-up db-init db-reset db-down s3-up s3-init s3-upload s3-verify slm-up slm-pull \
-        run prepare pipeline
+        run prepare pipeline demo-retry demo-retry-exhausted demo-s3-retry \
+        demo-s3-retry-exhausted demo-s3-outage
+
+# Les démos de retry ne traitent que les CSV : elles démontrent le retry, pas le SLM.
+DEMO_ENV := PIPELINE_EXTENSIONS=.csv
 
 help: ## Liste les cibles disponibles
 	@grep -E '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) \
@@ -108,3 +112,40 @@ prepare: ## Tout make pipeline sauf run (services, modèle, génération, upload
 pipeline: ## Pipeline complète en une commande (prepare puis run), rejouable
 	$(MAKE) prepare
 	$(MAKE) run
+
+# Démos de retry : base vidée pour que les objets soient réellement insérés.
+demo-retry: ## Démo retry DB : 2 pannes simulées puis succès (CSV seuls)
+	$(MAKE) prepare
+	$(MAKE) db-reset
+	$(DEMO_ENV) SIMULATE_DB_FAILURES=2 $(PYTHON) -m pipeline.run
+
+demo-retry-exhausted: ## Démo retry DB : plus de pannes que de tentatives, sort en erreur
+	$(MAKE) prepare
+	$(MAKE) db-reset
+	$(DEMO_ENV) SIMULATE_DB_FAILURES=$$(( $${DB_MAX_ATTEMPTS:-4} + 1 )) $(PYTHON) -m pipeline.run
+
+demo-s3-retry: ## Démo retry S3 : 2 pannes de téléchargement puis succès (CSV seuls)
+	$(MAKE) prepare
+	$(MAKE) db-reset
+	$(DEMO_ENV) SIMULATE_S3_FAILURES=2 $(PYTHON) -m pipeline.run
+
+demo-s3-retry-exhausted: ## Démo retry S3 : plus de pannes que de tentatives, sort en erreur
+	$(MAKE) prepare
+	$(MAKE) db-reset
+	$(DEMO_ENV) SIMULATE_S3_FAILURES=$$(( $${S3_MAX_ATTEMPTS:-4} + 1 )) $(PYTHON) -m pipeline.run
+
+# Panne RÉELLE : conteneur S3 arrêté, pipeline lancée, conteneur redémarré
+# OUTAGE_SECONDS plus tard. Avec 6 tentatives (attentes 1+2+4+8+16 s), la
+# dernière a lieu ~31 s après le début : large marge pour le redémarrage de
+# RustFS, même sur un runner CI lent.
+OUTAGE_SECONDS ?= 4
+OUTAGE_S3_MAX_ATTEMPTS ?= 6
+
+demo-s3-outage: ## Démo panne S3 réelle : conteneur arrêté puis redémarré (CSV seuls)
+	$(MAKE) prepare
+	$(MAKE) db-reset
+	docker compose stop s3
+	( sleep $(OUTAGE_SECONDS) && echo ">>> $(OUTAGE_SECONDS) s écoulées : redémarrage du conteneur S3" \
+		&& docker compose start s3 ) & \
+	$(DEMO_ENV) S3_MAX_ATTEMPTS=$(OUTAGE_S3_MAX_ATTEMPTS) $(PYTHON) -m pipeline.run; \
+	status=$$?; wait; exit $$status
