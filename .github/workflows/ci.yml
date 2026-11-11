@@ -41,6 +41,14 @@ jobs:
           cache-dependency-path: pyproject.toml
 
       - run: make install PY="${{ steps.setup-python.outputs.python-path }}"
+      # Dépendance système de l'OCR (images d'avis de virement).
+      - name: Installer Tesseract (OCR)
+        run: |
+          # Retentes apt : coupures passagères des miroirs Ubuntu vues sur les runners.
+          sudo apt-get -o Acquire::Retries=5 update
+          sudo apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
+            tesseract-ocr tesseract-ocr-eng
+          tesseract --version
 
       - name: Démarrer S3 (RustFS)
         run: make s3-up

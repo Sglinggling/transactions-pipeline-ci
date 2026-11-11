@@ -13,6 +13,7 @@ dependencies = [
     "psycopg[binary]>=3.2",
     "boto3>=1.35",
     "pillow>=10.4",
+    "pytesseract>=0.3.13",
 ]
 
 [project.optional-dependencies]
