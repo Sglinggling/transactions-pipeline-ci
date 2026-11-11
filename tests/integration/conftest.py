@@ -4,6 +4,8 @@ from botocore.exceptions import BotoCoreError, ClientError
 
 from pipeline.db import apply_schema, get_connection, reset_tables
 from pipeline.generate import write_csv_files
+from pipeline.generate_images import write_images
+from pipeline.generate_texts import write_texts
 from pipeline.storage import S3Settings, ensure_bucket, get_client, upload_directory
 
 from .helpers import TEST_BUCKET, TEST_PREFIX
@@ -66,4 +68,32 @@ def incoming(tmp_path):
 def s3_incoming(s3, incoming):
     """Les 3 CSV du générateur déposés dans le bucket de test, sous TEST_PREFIX."""
     upload_directory(s3, TEST_BUCKET, TEST_PREFIX, incoming)
+    return s3
+
+
+@pytest.fixture
+def incoming_mixed(incoming):
+    """Zone de dépôt locale : les 3 CSV et les 3 images d'avis de virement."""
+    write_images(incoming)
+    return incoming
+
+
+@pytest.fixture
+def s3_mixed(s3, incoming_mixed):
+    """Les 3 CSV et les 3 images déposés dans le bucket de test, sous TEST_PREFIX."""
+    upload_directory(s3, TEST_BUCKET, TEST_PREFIX, incoming_mixed)
+    return s3
+
+
+@pytest.fixture
+def incoming_all(incoming_mixed):
+    """Zone de dépôt locale : 3 CSV, 3 images et 4 textes."""
+    write_texts(incoming_mixed)
+    return incoming_mixed
+
+
+@pytest.fixture
+def s3_all(s3, incoming_all):
+    """Les trois sources déposées dans le bucket de test, sous TEST_PREFIX."""
+    upload_directory(s3, TEST_BUCKET, TEST_PREFIX, incoming_all)
     return s3
