@@ -92,7 +92,7 @@ def _upsert_totals(cur: psycopg.Cursor, kind: str, sums: pd.DataFrame) -> None:
     # Cumul entre fichiers délégué à la base.
     query = f"""
         INSERT INTO {table} ({db_key}, total) VALUES (%s, %s)
-        ON CONFLICT ({db_key}) DO UPDATE SET total = {table}.total + EXCLUDED.total
+        ON CONFLICT ({db_key}) DO UPDATE SET total = EXCLUDED.total
     """
     cur.executemany(
         query,
