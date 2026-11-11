@@ -23,7 +23,8 @@ export SLM_URL SLM_MODEL
 
 .DEFAULT_GOAL := help
 .PHONY: help install lint test test-integration generate generate-images generate-texts \
-        db-up db-init db-reset db-down s3-up s3-init s3-upload s3-verify slm-up slm-pull
+        db-up db-init db-reset db-down s3-up s3-init s3-upload s3-verify slm-up slm-pull \
+        run prepare pipeline
 
 help: ## Liste les cibles disponibles
 	@grep -E '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) \
@@ -85,3 +86,25 @@ slm-up: ## Démarre Ollama (SLM) et attend qu'il soit healthy
 slm-pull: ## Télécharge le modèle SLM_MODEL s'il est absent
 	docker compose exec -T ollama ollama pull $(SLM_MODEL)
 	docker compose exec -T ollama chmod -R a+rX /models
+
+# Lit uniquement le bucket S3 (S3_BUCKET / S3_PREFIX), jamais le dossier local.
+run: ## Traite les objets du bucket (.csv, .png, .txt) et les insère en base
+	$(PYTHON) -m pipeline.run
+
+# Étapes enchaînées explicitement : ordre garanti même avec make -j.
+prepare: ## Tout make pipeline sauf run (services, modèle, génération, upload, vérification)
+	$(MAKE) s3-up
+	$(MAKE) db-up
+	$(MAKE) slm-up
+	$(MAKE) slm-pull
+	$(MAKE) s3-init
+	$(MAKE) generate
+	$(MAKE) generate-images
+	$(MAKE) generate-texts
+	$(MAKE) s3-upload
+	$(MAKE) s3-verify
+	$(MAKE) db-init
+
+pipeline: ## Pipeline complète en une commande (prepare puis run), rejouable
+	$(MAKE) prepare
+	$(MAKE) run

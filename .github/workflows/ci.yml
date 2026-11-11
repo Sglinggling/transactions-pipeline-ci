@@ -78,6 +78,10 @@ jobs:
         run: make s3-verify
       - name: Initialiser le schéma
         run: make db-init
+      - name: Lancer la pipeline (lecture depuis S3)
+        run: make run
+      - name: Relancer make pipeline (rejouable, rien de réinséré)
+        run: make pipeline
 
       - run: make test-integration
 
