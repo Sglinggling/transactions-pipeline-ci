@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  # push limité à main : sur une branche avec PR, seul pull_request déclenche.
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-unit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      # Mêmes cibles qu'en local ; PY pointe vers le Python de setup-python.
+      - run: make install PY="${{ steps.setup-python.outputs.python-path }}"
+      - run: make lint
+      - run: make test

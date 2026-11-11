@@ -1,0 +1,21 @@
+# Données générées
+data/incoming/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+
+# Environnement
+.venv/
+
+# Outils
+.pytest_cache/
+.ruff_cache/
+.coverage
+
+# Secrets locaux
+.env
