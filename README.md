@@ -100,6 +100,7 @@ La numérotation suit l'énoncé.
 | **N1.3** Base de données relationnelle et fonction d'insertion | `docker-compose.yml` (postgres:16), `sql/schema.sql`, `db.py`, `make db-up` / `db-init` | `tests/integration/test_db.py` (valeurs exactes, cumul, rollback complet) |
 | **N1.4** Pipeline complète automatique (génération, chargement et traitement, mise en place de la base, insertion) | `run.py`, `make pipeline` | étapes CI « Lancer la pipeline » et « Relancer make pipeline » ; `tests/integration/test_pipeline.py` |
 | **N1.5** Tests d'intégration automatiques (données insérées, valeurs correctes, traitements attendus, flags), exécutés dans la CI | `tests/integration/`, `make test-integration` | job CI `integration` ; `test_pipeline.py::test_full_run` et `::test_flags`, `test_db.py` |
+| **N1.6** Simulation d'un échec de pipeline avec captures (cause, échec, message d'erreur, correction, réussite) | PR #1 : régression volontaire puis correctif | [docs/scenario-echec.md](docs/scenario-echec.md) et ses captures (`docs/img/`) |
 | **N1.7** Retry lors de l'insertion (détection, attente, plusieurs tentatives, maximum, arrêt de la pipeline, erreurs affichées) et anti-doublon, y compris lors d'un retry | `retry.py`, `fault_injection.py`, `db.py` (table `processed_files`, hash du contenu, même transaction), `make demo-retry` / `demo-retry-exhausted` | `tests/test_retry.py`, `tests/integration/test_retry_pipeline.py` (pannes puis succès, panne après commit sans doublon, épuisement) ; étape CI « Démo retry » |
 | **N2.1** Stockage des fichiers dans un service S3 local | RustFS dans `docker-compose.yml`, `storage.py`, `make s3-up` | `tests/integration/test_storage.py` (aller-retour octet pour octet) |
 | **N2.2** Upload automatique (démarrer le service, créer le bucket, générer, envoyer, vérifier la présence) | `make s3-up` / `s3-init` / `s3-upload` / `s3-verify`, enchaînées par `make pipeline` | étapes CI « Démarrer S3 », « Créer le bucket », « Upload », « Vérifier la présence » ; `test_storage.py` (objet manquant, taille différente) |
@@ -232,6 +233,13 @@ make test-integration   # 64 tests d'intégration, ~2 min en local
 - Les valeurs attendues sont écrites en dur, calculées une fois
   indépendamment du code testé.
 
+## Scénario d'échec de la CI
+
+Une régression volontaire (cumul des totaux remplacé par un écrasement) passe
+le lint et les tests unitaires mais est bloquée par les tests d'intégration
+dans la pull request, puis corrigée : [docs/scenario-echec.md](docs/scenario-echec.md)
+(diff, run rouge, message d'erreur exact, correctif, run vert, captures).
+
 ## CI
 
 GitHub Actions (`.github/workflows/ci.yml`) sur chaque push sur `main` et
@@ -275,6 +283,7 @@ src/pipeline/   code (un module par couche, voir le tableau Architecture)
   fonts/        police embarquée pour le rendu des images (+ licence)
 sql/            schéma PostgreSQL idempotent
 tests/          tests unitaires ; tests/integration/ : tests contre les vrais services
+docs/           scénario d'échec de la CI et captures (docs/img/)
 .github/        workflow CI
 Makefile        toutes les commandes (make help)
 docker-compose.yml  PostgreSQL, RustFS, Ollama
