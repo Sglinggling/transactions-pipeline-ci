@@ -42,13 +42,23 @@ jobs:
 
       - run: make install PY="${{ steps.setup-python.outputs.python-path }}"
 
+      - name: Démarrer S3 (RustFS)
+        run: make s3-up
       - name: Démarrer Postgres
         run: make db-up
+      - name: Créer le bucket
+        run: make s3-init
+      - name: Générer les CSV (zone de dépôt locale)
+        run: make generate
+      - name: Upload des CSV vers S3
+        run: make s3-upload
+      - name: Vérifier la présence des objets dans S3
+        run: make s3-verify
       - name: Initialiser le schéma
         run: make db-init
 
       - run: make test-integration
 
-      - name: Arrêter les services
+      - name: Arrêter tous les services (Postgres, S3)
         if: always()
         run: make db-down

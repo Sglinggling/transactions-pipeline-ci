@@ -15,5 +15,27 @@ services:
       timeout: 5s
       retries: 15
 
+  # Stockage objet compatible S3 (RustFS, version épinglée).
+  s3:
+    image: rustfs/rustfs:1.0.4
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:-pipeline}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:-pipelinesecret}
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001
+    ports:
+      - "${S3_PORT:-9000}:9000" # API S3
+      - "${S3_CONSOLE_PORT:-9001}:9001" # console web
+    volumes:
+      - s3data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/health"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
 volumes:
   pgdata:
+  s3data:
